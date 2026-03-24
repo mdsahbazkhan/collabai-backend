@@ -50,7 +50,9 @@ const getTaskByProject = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
     const isOwner = projectExists.owner.toString() === userId.toString();
-    const isMember = projectExists.members.includes(userId);
+    const isMember = projectExists.members.some(
+      (member) => member.toString() === userId.toString(),
+    );
     if (!isOwner && !isMember) {
       return res.status(403).json({ message: "You are not authorized" });
     }
@@ -62,6 +64,29 @@ const getTaskByProject = async (req, res) => {
     return res.status(200).json({ tasks: task });
   } catch (error) {
     return res.status(500).json({ message: error.message });
+  }
+};
+const getAllTasks = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // get projects where user is owner or member
+    const projects = await Project.find({
+      $or: [{ owner: userId }, { members: { $in: [userId] } }],
+    });
+
+    const projectIds = projects.map((p) => p._id);
+
+    const tasks = await Task.find({
+      project: { $in: projectIds },
+    })
+      .sort({ createdAt: -1 })
+      .populate("assignedTo", "name email")
+      .populate("project", "name");
+
+    res.status(200).json({ tasks });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 const updateTask = async (req, res) => {
@@ -84,7 +109,9 @@ const updateTask = async (req, res) => {
     }
     const projectExists = await Project.findById(task.project);
     const isOwner = projectExists.owner.toString() === userId.toString();
-    const isMember = projectExists.members.includes(userId);
+    const isMember = projectExists.members.some(
+      (member) => member.toString() === userId.toString(),
+    );
     if (!isOwner && !isMember) {
       return res.status(403).json({ message: "You are not authorized" });
     }
@@ -144,7 +171,9 @@ const addComment = async (req, res) => {
     if (!projectExists) {
       return res.status(404).json({ message: "Project not found" });
     }
-    const isMember = projectExists.members.includes(userId);
+    const isMember = projectExists.members.some(
+      (member) => member.toString() === userId.toString(),
+    );
     const isOwner = projectExists.owner.toString() === userId.toString();
     if (!isOwner && !isMember) {
       return res
@@ -180,7 +209,9 @@ const getTaskById = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
     const isOwner = projectExists.owner.toString() === userId.toString();
-    const isMember = projectExists.members.includes(userId);
+    const isMember = projectExists.members.some(
+      (member) => member.toString() === userId.toString(),
+    );
     if (!isOwner && !isMember) {
       return res.status(403).json({ message: "You are not authorized" });
     }
@@ -192,6 +223,7 @@ const getTaskById = async (req, res) => {
 };
 const updateTaskStatus = async (req, res) => {
   try {
+    const userId = req.user._id;
     const taskId = req.params.id;
     const { status } = req.body;
     const validStatus = ["todo", "inProgress", "review", "completed"];
@@ -208,7 +240,9 @@ const updateTaskStatus = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
     const isOwner = projectExists.owner.toString() === userId.toString();
-    const isMember = projectExists.members.includes(userId);
+    const isMember = projectExists.members.some(
+      (member) => member.toString() === userId.toString(),
+    );
     if (!isOwner && !isMember) {
       return res.status(403).json({ message: "You are not authorized" });
     }
@@ -225,6 +259,7 @@ const updateTaskStatus = async (req, res) => {
 module.exports = {
   createTask,
   getTaskByProject,
+  getAllTasks,
   updateTask,
   deleteTask,
   addComment,
