@@ -17,20 +17,24 @@ const projectSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ["active", "completed","archived"],
+      enum: ["active", "completed", "archived"],
       default: "active",
     },
-    startDate:{
-        type: Date,
-        default: Date.now,
+    startDate: {
+      type: Date,
+      default: Date.now,
     },
-    endDate:{
-        type: Date,
+    endDate: {
+      type: Date,
     },
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    color: {
+      type: String,
+      default: "bg-blue-500",
     },
   },
   {

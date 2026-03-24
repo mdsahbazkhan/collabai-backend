@@ -16,7 +16,9 @@ const createTask = async (req, res) => {
       return res.status(404).json({ message: " Project not found" });
     }
     const isOwner = projectExists.owner.toString() === userId.toString();
-    const isMember = projectExists.members.includes(userId);
+    const isMember = projectExists.members.some(
+      (member) => member.toString() === userId.toString(),
+    );
     if (!isOwner && !isMember) {
       return res.status(403).json({ message: "You are not authorized" });
     }
