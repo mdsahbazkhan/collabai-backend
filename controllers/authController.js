@@ -76,4 +76,16 @@ const loginUser = async (req, res) => {
 const getMe = (req, res) => {
   res.status(200).json(req.user);
 };
-module.exports = { registerUser, loginUser, getMe };
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("_id name email");
+
+    res.status(200).json({
+      message: "Users fetched",
+      users,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+module.exports = { registerUser, loginUser, getMe,getAllUsers };

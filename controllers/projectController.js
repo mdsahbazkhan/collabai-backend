@@ -177,7 +177,9 @@ const addMember = async (req, res) => {
     if (project.owner.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: "Only owner can add member" });
     }
-    if (project.members.includes(userId)) {
+    if (
+      project.members.some((member) => member.toString() === userId.toString())
+    ) {
       return res
         .status(400)
         .json({ message: "User is already member of project" });
