@@ -63,29 +63,6 @@ const getUserProjects = async (req, res) => {
   }
 };
 
-// const getProjectById = async (req, res) => {
-//   try {
-//     const projectId = req.params.id;
-//     const userId = req.user._id;
-//     const project = await Project.findById(projectId)
-//     if (!project) {
-//       return res.status(404).json({ message: "Project not found" });
-//     }
-//     const isOwner = project.owner.toString() === userId.toString();
-//     const isMember = project.members.includes(userId);
-//     if (!isOwner && !isMember) {
-//       return res
-//         .status(401)
-//         .json({ message: "You are not authorized to access this project" });
-//     }
-
-//     return res
-//       .status(200)
-//       .json({ message: "Project fetched successfully", project });
-//   } catch (error) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
 const getProjectById = async (req, res) => {
   try {
     const projectId = req.params.id;
