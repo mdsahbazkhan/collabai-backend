@@ -17,7 +17,7 @@ const createTask = async (req, res) => {
     }
     const isOwner = projectExists.owner.toString() === userId.toString();
     const isMember = projectExists.members.some(
-      (member) => member.toString() === userId.toString(),
+      (member) => member.user.toString() === userId.toString(),
     );
     if (!isOwner && !isMember) {
       return res.status(403).json({ message: "You are not authorized" });
@@ -51,7 +51,7 @@ const getTaskByProject = async (req, res) => {
     }
     const isOwner = projectExists.owner.toString() === userId.toString();
     const isMember = projectExists.members.some(
-      (member) => member.toString() === userId.toString(),
+      (member) => member.user.toString() === userId.toString(),
     );
     if (!isOwner && !isMember) {
       return res.status(403).json({ message: "You are not authorized" });
@@ -72,7 +72,7 @@ const getAllTasks = async (req, res) => {
 
     // get projects where user is owner or member
     const projects = await Project.find({
-      $or: [{ owner: userId }, { members: { $in: [userId] } }],
+      $or: [{ owner: userId }, { "members.user": userId }],
     });
 
     const projectIds = projects.map((p) => p._id);
@@ -110,7 +110,7 @@ const updateTask = async (req, res) => {
     const projectExists = await Project.findById(task.project);
     const isOwner = projectExists.owner.toString() === userId.toString();
     const isMember = projectExists.members.some(
-      (member) => member.toString() === userId.toString(),
+      (member) => member.user.toString() === userId.toString(),
     );
     if (!isOwner && !isMember) {
       return res.status(403).json({ message: "You are not authorized" });
@@ -172,7 +172,7 @@ const addComment = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
     const isMember = projectExists.members.some(
-      (member) => member.toString() === userId.toString(),
+      (member) => member.user.toString() === userId.toString(),
     );
     const isOwner = projectExists.owner.toString() === userId.toString();
     if (!isOwner && !isMember) {
@@ -210,7 +210,7 @@ const getTaskById = async (req, res) => {
     }
     const isOwner = projectExists.owner.toString() === userId.toString();
     const isMember = projectExists.members.some(
-      (member) => member.toString() === userId.toString(),
+      (member) => member.user.toString() === userId.toString(),
     );
     if (!isOwner && !isMember) {
       return res.status(403).json({ message: "You are not authorized" });
@@ -241,7 +241,7 @@ const updateTaskStatus = async (req, res) => {
     }
     const isOwner = projectExists.owner.toString() === userId.toString();
     const isMember = projectExists.members.some(
-      (member) => member.toString() === userId.toString(),
+      (member) => member.user.toString() === userId.toString(),
     );
     if (!isOwner && !isMember) {
       return res.status(403).json({ message: "You are not authorized" });

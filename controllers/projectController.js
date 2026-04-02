@@ -76,20 +76,24 @@ const getProjectById = async (req, res) => {
     }
 
     const isOwner = project.owner._id.toString() === userId.toString();
-    const isMember = project.members.some(
-      (member) => member.user._id.toString() === userId.toString(),
+
+    // ✅ find member properly
+    const member = project.members.find(
+      (m) => m.user._id.toString() === userId.toString(),
     );
 
+    const isMember = !!member;
+
     if (!isOwner && !isMember) {
-      return res
-        .status(401)
-        .json({ message: "You are not authorized to access this project" });
+      return res.status(403).json({
+        message: "You are not authorized to access this project",
+      });
     }
 
     return res.status(200).json({
       message: "Project fetched successfully",
       project,
-      role: isOwner ? "owner" : member.role,
+      role: isOwner ? "owner" : member.role, // ✅ now safe
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
