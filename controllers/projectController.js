@@ -103,27 +103,47 @@ const updateProject = async (req, res) => {
   try {
     const projectId = req.params.id;
     const userId = req.user._id;
+
     const { name, description, startDate, endDate, status, color } = req.body;
+
     const project = await Project.findById(projectId);
+
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }
-    if (project.owner.toString() !== userId.toString()) {
-      return res
-        .status(401)
-        .json({ message: "You are not authorized to update this project" });
+
+    // 🔥 find member
+    const member = project.members.find(
+      (m) => m.user.toString() === userId.toString(),
+    );
+
+    const isOwner = project.owner.toString() === userId.toString();
+
+    if (!member && !isOwner) {
+      return res.status(403).json({ message: "Access denied" });
     }
+
+    // 🔥 RBAC check
+    if (!isOwner && member.role !== "admin") {
+      return res.status(403).json({
+        message: "Only owner/admin can update project",
+      });
+    }
+
+    // ✅ update fields
     if (name) project.name = name;
     if (description) project.description = description;
     if (startDate) project.startDate = startDate;
     if (endDate) project.endDate = endDate;
     if (status) project.status = status;
     if (color) project.color = color;
+
     const updatedProject = await project.save();
 
-    return res
-      .status(200)
-      .json({ message: "Project updated successfully", updatedProject });
+    return res.status(200).json({
+      message: "Project updated successfully",
+      project: updatedProject,
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -137,9 +157,9 @@ const deleteProject = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
     if (project.owner.toString() !== userId.toString()) {
-      return res
-        .status(401)
-        .json({ message: "You are not authorized to delete this project" });
+      return res.status(403).json({
+        message: "Only owner can delete project",
+      });
     }
     await Project.findByIdAndDelete(projectId);
     return res.status(200).json({ message: "Project deleted successfully" });

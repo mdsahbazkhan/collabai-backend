@@ -256,10 +256,35 @@ const updateTaskStatus = async (req, res) => {
   }
 };
 
+const getRecentTasks = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const projects = await Project.find({
+      $or: [{ owner: userId }, { "members.user": userId }],
+    });
+
+    const projectIds = projects.map((p) => p._id);
+
+    const tasks = await Task.find({
+      project: { $in: projectIds },
+    })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("assignedTo", "name email avatar")
+      .populate("project", "name");
+
+    res.status(200).json({ tasks });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createTask,
   getTaskByProject,
   getAllTasks,
+  getRecentTasks,
   updateTask,
   deleteTask,
   addComment,
