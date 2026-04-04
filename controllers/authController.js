@@ -2,15 +2,38 @@ const User = require("../models/userModel");
 const bcrypt = require("bcryptjs");
 const generateToken = require("../utils/generateToken");
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",.<>/?\\|`~]).{8,10}$/;
+
 // Register User
 
 const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
+
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Please provide all fields" });
     }
-    const userExists = await User.findOne({ email });
+
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedName) {
+      return res.status(400).json({ message: "Name cannot be empty" });
+    }
+
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      return res.status(400).json({ message: "Enter a valid email address" });
+    }
+
+    if (!PASSWORD_REGEX.test(password)) {
+      return res.status(400).json({
+        message:
+          "Password must be 8–10 characters and include an uppercase letter, lowercase letter, number, and special character",
+      });
+    }
+
+    const userExists = await User.findOne({ email: trimmedEmail });
     if (userExists) {
       return res.status(400).json({
         success: false,
@@ -24,8 +47,8 @@ const registerUser = async (req, res) => {
 
     //Create User
     const user = await User.create({
-      name,
-      email,
+      name: trimmedName,
+      email: trimmedEmail,
       password: hashedPassword,
     });
 
@@ -49,7 +72,18 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Please provide email and password" });
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      return res.status(400).json({ message: "Enter a valid email address" });
+    }
+
+    const user = await User.findOne({ email: trimmedEmail });
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
