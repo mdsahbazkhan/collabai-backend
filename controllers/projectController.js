@@ -1,4 +1,7 @@
 const Project = require("../models/projectModel");
+const Task = require("../models/taskModel");
+const User = require("../models/userModel");
+const Activity = require("../models/activityModel");
 
 const createProject = async (req, res) => {
   try {
@@ -216,6 +219,134 @@ const addMember = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+const removeMember = async (req, res) => {
+  try {
+    const { projectId, userId } = req.params;
+    const currentUserId = req.user._id;
+    const project = await Project.findById(projectId);
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    // Find Currentuser
+    const currentUser = project.members.find(
+      (m) => m.user.toString() === currentUserId.toString(),
+    );
+    const isOwner = project.owner.toString() === currentUserId.toString();
+    if (!isOwner && (!currentUser || currentUser.role !== "admin")) {
+      return res
+        .status(403)
+        .json({ message: "Only owner/admin can remove members" });
+    }
+    // Target Remove Member
+    const targetMember = project.members.find(
+      (m) => m.user.toString() === userId.toString(),
+    );
+    if (!targetMember)
+      return res.status(404).json({ message: "Member not found" });
+    // Cannot Remove owner
+    if (targetMember.role === "owner")
+      return res.status(400).json({ message: "Cannot remove project owner" });
+    // Admin Cannot remove another admin
+    if (!isOwner && targetMember.role === "admin") {
+      return res
+        .status(403)
+        .json({ message: "Admin cannot remove another admin" });
+    }
+    // Unassign tasks assigned to this member in the project
+    const Task = require("../models/taskModel");
+    await Task.updateMany(
+      { project: projectId, assignedTo: userId },
+      { $unset: { assignedTo: 1 } }
+    );
+    // Remove Member
+    project.members = project.members.filter(
+      (m) => m.user.toString() !== userId.toString(),
+    );
+    await project.save();
+
+    return res.status(200).json({
+      message: "Member removed successfully",
+      project,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+const deleteMemberFromDB = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const currentUserId = req.user._id;
+
+    const userToDelete = await User.findById(userId);
+    if (!userToDelete) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const projects = await Project.find({
+      $or: [
+        { owner: currentUserId },
+        { "members.user": currentUserId, "members.role": { $in: ["owner", "admin"] } }
+      ]
+    });
+
+    const userProjectRoles = [];
+    for (const project of projects) {
+      const member = project.members.find(
+        (m) => m.user.toString() === userId.toString()
+      );
+      if (member) {
+        userProjectRoles.push({
+          projectId: project._id,
+          projectName: project.name,
+          role: member.role
+        });
+
+        await Task.updateMany(
+          { project: project._id, assignedTo: userId },
+          { $unset: { assignedTo: 1 } }
+        );
+
+        project.members = project.members.filter(
+          (m) => m.user.toString() !== userId.toString()
+        );
+        await project.save();
+      }
+    }
+
+    await Activity.create({
+      user: currentUserId,
+      action: "member_deleted",
+      description: `Deleted user ${userToDelete.name} from system`,
+      targetUser: userId,
+      targetUserName: userToDelete.name,
+      metadata: {
+        deletedFromProjects: userProjectRoles,
+        deletedUserEmail: userToDelete.email
+      }
+    });
+
+    return res.status(200).json({
+      message: "Member deleted from database successfully",
+      deletedFromProjects: userProjectRoles
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+const getProjectsCountByUser = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    const projectCount = await Project.countDocuments({
+      $or: [{ owner: userId }, { "members.user": userId }],
+    });
+
+    res.status(200).json({ projectCount });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createProject,
   getUserProjects,
@@ -223,4 +354,7 @@ module.exports = {
   updateProject,
   deleteProject,
   addMember,
+  removeMember,
+  deleteMemberFromDB,
+  getProjectsCountByUser,
 };

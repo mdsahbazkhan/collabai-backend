@@ -279,6 +279,38 @@ const getRecentTasks = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+const getTasksByUser = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const currentUserId = req.user._id;
+
+    const tasks = await Task.find({
+      assignedTo: userId,
+    })
+      .sort({ createdAt: -1 })
+      .populate("project", "name")
+      .populate("createdBy", "name email")
+      .populate("assignedTo", "name email");
+
+    res.status(200).json({ tasks });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getTasksCountByUser = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    const taskCount = await Task.countDocuments({
+      assignedTo: userId,
+    });
+
+    res.status(200).json({ taskCount });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 module.exports = {
   createTask,
@@ -290,4 +322,6 @@ module.exports = {
   addComment,
   getTaskById,
   updateTaskStatus,
+  getTasksByUser,
+  getTasksCountByUser,
 };
