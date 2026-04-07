@@ -221,7 +221,8 @@ const addMember = async (req, res) => {
 };
 const removeMember = async (req, res) => {
   try {
-    const { projectId, userId } = req.params;
+    const projectId = req.params.projectId || req.params.id;
+    const userId = req.params.userId;
     const currentUserId = req.user._id;
     const project = await Project.findById(projectId);
     if (!project) return res.status(404).json({ message: "Project not found" });
@@ -230,10 +231,8 @@ const removeMember = async (req, res) => {
       (m) => m.user.toString() === currentUserId.toString(),
     );
     const isOwner = project.owner.toString() === currentUserId.toString();
-    if (!isOwner && (!currentUser || currentUser.role !== "admin")) {
-      return res
-        .status(403)
-        .json({ message: "Only owner/admin can remove members" });
+    if (!isOwner) {
+      return res.status(403).json({ message: "Only owner can remove members" });
     }
     // Target Remove Member
     const targetMember = project.members.find(
@@ -244,17 +243,11 @@ const removeMember = async (req, res) => {
     // Cannot Remove owner
     if (targetMember.role === "owner")
       return res.status(400).json({ message: "Cannot remove project owner" });
-    // Admin Cannot remove another admin
-    if (!isOwner && targetMember.role === "admin") {
-      return res
-        .status(403)
-        .json({ message: "Admin cannot remove another admin" });
-    }
     // Unassign tasks assigned to this member in the project
     const Task = require("../models/taskModel");
     await Task.updateMany(
       { project: projectId, assignedTo: userId },
-      { $unset: { assignedTo: 1 } }
+      { $unset: { assignedTo: 1 } },
     );
     // Remove Member
     project.members = project.members.filter(
@@ -284,29 +277,32 @@ const deleteMemberFromDB = async (req, res) => {
     const projects = await Project.find({
       $or: [
         { owner: currentUserId },
-        { "members.user": currentUserId, "members.role": { $in: ["owner", "admin"] } }
-      ]
+        {
+          "members.user": currentUserId,
+          "members.role": { $in: ["owner", "admin"] },
+        },
+      ],
     });
 
     const userProjectRoles = [];
     for (const project of projects) {
       const member = project.members.find(
-        (m) => m.user.toString() === userId.toString()
+        (m) => m.user.toString() === userId.toString(),
       );
       if (member) {
         userProjectRoles.push({
           projectId: project._id,
           projectName: project.name,
-          role: member.role
+          role: member.role,
         });
 
         await Task.updateMany(
           { project: project._id, assignedTo: userId },
-          { $unset: { assignedTo: 1 } }
+          { $unset: { assignedTo: 1 } },
         );
 
         project.members = project.members.filter(
-          (m) => m.user.toString() !== userId.toString()
+          (m) => m.user.toString() !== userId.toString(),
         );
         await project.save();
       }
@@ -320,13 +316,13 @@ const deleteMemberFromDB = async (req, res) => {
       targetUserName: userToDelete.name,
       metadata: {
         deletedFromProjects: userProjectRoles,
-        deletedUserEmail: userToDelete.email
-      }
+        deletedUserEmail: userToDelete.email,
+      },
     });
 
     return res.status(200).json({
       message: "Member deleted from database successfully",
-      deletedFromProjects: userProjectRoles
+      deletedFromProjects: userProjectRoles,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -346,6 +342,49 @@ const getProjectsCountByUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+const changeMemberRole = async (req, res) => {
+  try {
+    const projectId = req.params.projectId || req.params.id;
+    const memberId = req.params.userId || req.params.memberId;
+    const { role } = req.body;
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    const member = project.members.find((m) => m.user.toString() === memberId);
+    if (!member) {
+      return res.status(404).json({ message: "Member not found" });
+    }
+
+    // Only owner can change roles
+    const currentUser = project.members.find(
+      (m) => m.user.toString() === req.user._id.toString(),
+    );
+    if (!currentUser || currentUser.role !== "owner") {
+      return res.status(403).json({
+        message: "Only project owner can change member roles",
+      });
+    }
+
+    // Cannot change role of owner
+    if (member.role === "owner") {
+      return res
+        .status(400)
+        .json({ message: "Cannot change the role of project owner" });
+    }
+
+    member.role = role;
+    await project.save();
+
+    return res.status(200).json({
+      message: "Member role updated successfully",
+      project,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
 module.exports = {
   createProject,
@@ -357,4 +396,5 @@ module.exports = {
   removeMember,
   deleteMemberFromDB,
   getProjectsCountByUser,
+  changeMemberRole,
 };
