@@ -9,8 +9,7 @@ const taskRoutes = require("./routes/taskRoutes");
 const app = express();
 
 // connect Database
-connectDB()
-
+connectDB();
 
 //Middlewares
 app.use(cors());
@@ -22,8 +21,8 @@ app.get("/", (req, res) => {
 
 //Routes
 app.use("/api/users", userRoutes);
-app.use("/api/projects",projectRoutes)
-app.use("/api/tasks", taskRoutes)
+app.use("/api/projects", projectRoutes);
+app.use("/api/tasks", taskRoutes);
 
 const PORT = process.env.PORT || 5000;
 

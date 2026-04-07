@@ -5,10 +5,6 @@ const permit = (allowedRoles = []) => {
     try {
       const userId = req.user._id.toString();
       const projectId = req.params.projectId || req.params.id;
-      
-      console.log("=== PERMIT ===");
-      console.log("userId:", userId);
-      console.log("projectId:", projectId);
 
       const project = await Project.findById(projectId).select("owner members");
       if (!project) {
@@ -21,21 +17,15 @@ const permit = (allowedRoles = []) => {
       const memberInMembers = project.members.find(
         (m) => m.user.toString() === userId,
       );
-      const isOwnerInMembers = memberInMembers && memberInMembers.role === "owner";
-
-      console.log("ownerId:", ownerId);
-      console.log("isOwner:", isOwner);
-      console.log("memberInMembers:", !!memberInMembers);
-      console.log("isOwnerInMembers:", isOwnerInMembers);
+      const isOwnerInMembers =
+        memberInMembers && memberInMembers.role === "owner";
 
       if (isOwner || isOwnerInMembers) {
-        console.log("PASS - calling next()");
         req.memberRole = "owner";
         req.project = project;
         return next();
       }
 
-      console.log("FAIL - checking member role");
       if (!memberInMembers) {
         return res
           .status(403)
@@ -48,7 +38,6 @@ const permit = (allowedRoles = []) => {
       }
       req.memberRole = memberInMembers.role;
       req.project = project;
-      console.log("PASS - member role OK, calling next()");
       next();
     } catch (error) {
       res.status(500).json({ message: "Server error" });
