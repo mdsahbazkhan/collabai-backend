@@ -1,6 +1,6 @@
 const Task = require("../models/taskModel");
 const Project = require("../models/projectModel");
-const { getIO } = require("../socket");
+const { getIO } = require("./../socket/socket");
 
 const createTask = async (req, res) => {
   try {
