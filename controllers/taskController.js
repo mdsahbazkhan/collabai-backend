@@ -1,5 +1,6 @@
 const Task = require("../models/taskModel");
 const Project = require("../models/projectModel");
+const { getIO } = require("../socket");
 
 const createTask = async (req, res) => {
   try {
@@ -91,6 +92,7 @@ const getAllTasks = async (req, res) => {
 };
 const updateTask = async (req, res) => {
   try {
+    const io = getIO();
     const taskId = req.params.id;
     const userId = req.user._id;
     const {
@@ -124,9 +126,16 @@ const updateTask = async (req, res) => {
     if (tags) task.tags = tags;
     if (status) task.status = status;
     await task.save();
+    if (!task.project) {
+      return res.status(400).json({ message: "Task project missing" });
+    }
+    console.log("🔥 EMITTING:", task.project);
+    // io.to(task.project.toString()).emit("taskStatusUpdated", task);
+    io.emit("taskUpdated", task); // 👈 send to ALL
 
     return res.status(200).json({ message: "Task updated successfully", task });
   } catch (error) {
+    console.error("ERROR:", error);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -223,6 +232,7 @@ const getTaskById = async (req, res) => {
 };
 const updateTaskStatus = async (req, res) => {
   try {
+    const io = getIO();
     const userId = req.user._id;
     const taskId = req.params.id;
     const { status } = req.body;
@@ -248,10 +258,17 @@ const updateTaskStatus = async (req, res) => {
     }
     task.status = status;
     await task.save();
+    if (!task.project) {
+      return res.status(400).json({ message: "Task project missing" });
+    }
+    console.log("🔥 EMITTING:", task.project);
+    // io.to(task.project.toString()).emit("taskStatusUpdated", task);
+    io.emit("taskUpdated", task); // 👈 send to ALL
     return res
       .status(200)
       .json({ message: "Task status updated successfully", task });
   } catch (error) {
+    console.error("ERROR:", error);
     return res.status(500).json({ message: error.message });
   }
 };

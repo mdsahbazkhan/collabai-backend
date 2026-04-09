@@ -1,5 +1,7 @@
 const express = require("express");
 const cors = require("cors");
+const http = require("http");
+const { initSocket } = require("./socket");
 require("dotenv").config();
 const connectDB = require("./config/db");
 const userRoutes = require("./routes/userRoutes");
@@ -7,7 +9,9 @@ const projectRoutes = require("./routes/projectRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 
 const app = express();
-
+const server = http.createServer(app);
+// init Socket.IO
+initSocket(server);
 // connect Database
 connectDB();
 
@@ -26,6 +30,6 @@ app.use("/api/tasks", taskRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
