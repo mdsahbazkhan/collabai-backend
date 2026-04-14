@@ -1,5 +1,5 @@
 let io;
-
+const onlineUsers = new Map();
 const initSocket = (server) => {
   const { Server } = require("socket.io");
   const Message = require("../models/message");
@@ -19,6 +19,17 @@ const initSocket = (server) => {
       if (!roomId) return;
       socket.join(roomId);
       console.log(`User ${socket.id} joined room ${roomId}`);
+    });
+    socket.on("addUser", (userId) => {
+      onlineUsers.set(userId, socket.id);
+
+      // send all online users
+      io.emit("onlineUsers", Array.from(onlineUsers.keys()));
+    });
+
+    // ✅ Get Online Users
+    socket.on("getOnlineUsers", () => {
+      socket.emit("onlineUsers", Array.from(onlineUsers.keys()));
     });
 
     // ✅ Typing Start
@@ -53,7 +64,6 @@ const initSocket = (server) => {
         await message.populate("sender", "name avatar");
 
         io.to(roomId).emit("newMessage", message);
-
       } catch (error) {
         console.error("Error sending message:", error);
       }
@@ -61,6 +71,15 @@ const initSocket = (server) => {
 
     // ✅ Disconnect
     socket.on("disconnect", () => {
+      for (let [userId, socketId] of onlineUsers.entries()) {
+        if (socketId === socket.id) {
+          onlineUsers.delete(userId);
+          break;
+        }
+      }
+
+      io.emit("onlineUsers", Array.from(onlineUsers.keys()));
+
       console.log("User disconnected:", socket.id);
     });
   });
