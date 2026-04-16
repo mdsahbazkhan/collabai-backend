@@ -49,7 +49,7 @@ const initSocket = (server) => {
     // ✅ Send Message
     socket.on("sendMessage", async (data) => {
       try {
-        const { sender, text, projectId, conversationId, roomId } = data;
+        const { sender, text, projectId, conversationId, roomId, receiverId } = data;
 
         if (!text?.trim()) return;
 
@@ -64,8 +64,34 @@ const initSocket = (server) => {
         await message.populate("sender", "name avatar");
 
         io.to(roomId).emit("newMessage", message);
+        // 🔥 send notification to specific user
+        if (receiverId) {
+          const receiverSocket = onlineUsers.get(receiverId);
+          if (receiverSocket) {
+            io.to(receiverSocket).emit("newNotification", {
+              senderId: sender,
+              conversationId,
+              message,
+            });
+          }
+        }
       } catch (error) {
         console.error("Error sending message:", error);
+      }
+    });
+
+    // ✅ Mark messages as seen
+    socket.on("markSeen", async ({ conversationId, userId }) => {
+      if (!conversationId || !userId) return;
+      try {
+        await Message.updateMany(
+          { conversationId, sender: { $ne: userId }, seenBy: { $ne: userId } },
+          { $addToSet: { seenBy: userId } },
+        );
+        // Notify the other members of the conversation that messages were seen
+        socket.to(conversationId).emit("messagesSeen", { conversationId, seenBy: userId });
+      } catch (err) {
+        console.error("markSeen error:", err);
       }
     });
 

@@ -21,6 +21,12 @@ const messageSchema = new mongoose.Schema(
       ref: "Conversation",
       default: null,
     },
+    seenBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   { timestamps: true },
 );
