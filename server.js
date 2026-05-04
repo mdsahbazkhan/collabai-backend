@@ -9,6 +9,7 @@ const projectRoutes = require("./routes/projectRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const messageRoutes = require("./routes/message");
 const conversationRoutes = require("./routes/conversation");
+const aiRoutes = require("./routes/ai");
 
 const app = express();
 const server = http.createServer(app);
@@ -31,6 +32,7 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/conversations", conversationRoutes);
+app.use("/api/ai", aiRoutes);
 
 const PORT = process.env.PORT || 5000;
 
