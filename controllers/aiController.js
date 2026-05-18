@@ -2,16 +2,16 @@ const { getAIResponse } = require("../services/ai.service");
 
 const chatWithAI = async (req, res) => {
   try {
-    const { message } = req.body;
+    const { messages } = req.body;
 
-    if (!message) {
+    if (!messages) {
       return res.status(400).json({
         success: false,
         message: "Message is required",
       });
     }
 
-    const aiResponse = await getAIResponse(message);
+    const aiResponse = await getAIResponse(messages);
 
     res.status(200).json({
       success: true,
