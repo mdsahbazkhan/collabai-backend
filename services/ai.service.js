@@ -1,8 +1,12 @@
 const Groq = require("groq-sdk");
+const Project = require("../models/projectModel");
+const { buildProjectContext } = require("./aiContext.service");
+const { PROJECT_AI_PROMPT } = require("./aiPrompt.service");
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
+const model = "llama-3.3-70b-versatile";
 
 const getAIResponse = async (messages) => {
   try {
@@ -13,7 +17,7 @@ const getAIResponse = async (messages) => {
     }));
 
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: model,
       messages: [
         {
           role: "system",
@@ -61,5 +65,45 @@ Tone:
     return "Sorry, I encountered an error. Please try again.";
   }
 };
+const handleProjectAIChat = async (projectId, userId, message, messages) => {
+  try {
+    const project = await Project.findOne({
+      _id: projectId,
+      "members.user": userId,
+    });
+    if (!project) {
+      throw new Error("Access denied");
+    }
+    const context = await buildProjectContext(projectId);
 
-module.exports = { getAIResponse };
+    const aiMessages = [
+      {
+        role: "system",
+        content: `${PROJECT_AI_PROMPT}`,
+      },
+      {
+        role: "system",
+        content: `Current project context:${JSON.stringify(context)}`,
+      },
+      ...messages,
+      {
+        role: "user",
+        content: String(message),
+      },
+    ];
+    const completion = await groq.chat.completions.create({
+      model: model,
+      messages: aiMessages,
+      temperature: 0.7,
+    });
+    return {
+      success: true,
+      message: completion.choices[0]?.message?.content,
+    };
+  } catch (error) {
+    console.error("Error in project AI chat:", error);
+    return { message: "Sorry, I encountered an error. Please try again." };
+  }
+};
+
+module.exports = { getAIResponse, handleProjectAIChat };
